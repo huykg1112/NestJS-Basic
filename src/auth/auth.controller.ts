@@ -1,31 +1,29 @@
 import {
   Body,
   Controller,
-  Get,
+  HttpException,
+  HttpStatus,
   Post,
-  Request,
-  UseGuards,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
-
-interface User {
-  username: string;
-  password: string;
-}
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('login')
-  async login(@Body() user: User) {
-    return this.authService.login(user);
-  }
-
-  @Get('profile')
-  @UseGuards(AuthGuard('jwt')) // sử dụng AuthGuard với chiến lược jwt để bảo vệ route /profile
-  getProfile(@Request() req) {
-    return req.user; // trả về thông tin user
+  async login(@Body() body: { username: string; password: string }) {
+    try {
+      const user = await this.authService.validateUser(
+        body.username,
+        body.password,
+      );
+      return this.authService.login(user);
+    } catch (error) {
+      throw new HttpException(
+        'The password or username is not correct!',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
   }
 }
