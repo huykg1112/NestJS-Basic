@@ -1,31 +1,44 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { User } from '../modules/user/user.entity';
+import * as bcrypt from 'bcrypt'; // Import bcrypt để so sánh mật khẩu
 import { UserService } from '../modules/user/user.service';
+import { LoginDto } from './dto/login.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly userService: UserService, // Khai báo UserService
-    private readonly jwtService: JwtService, // Khai báo JwtService
-  ) {} // khởi tạo JwtService - đây là phương thức giúp tạo và giải mã token
+    private readonly userService: UserService,
+    private readonly jwtService: JwtService,
+  ) {}
 
   // Kiểm tra thông tin đăng nhập
-  async validateUser(
-    username: string,
-    password: string,
-  ): Promise<Omit<User, 'password'>> {
+  async validateUser(username: string, password: string) {
     const user = await this.userService.findUsername(username);
-
-    if (user && password === user.password) {
-      const { password: userPassword, ...result } = user;
-      return result as User;
+    if (!user) {
+      throw new UnauthorizedException(
+        'Tên người dùng hoặc mật khẩu không đúng',
+      );
     }
-    throw new UnauthorizedException('The password is not correct');
+
+    // 🔐 **So sánh mật khẩu nhập vào với mật khẩu đã mã hóa**
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      throw new UnauthorizedException(
+        'Tên người dùng hoặc mật khẩu không đúng',
+      );
+    }
+
+    // Trả về user nhưng loại bỏ password
+    if (user.isActive === false) {
+      throw new UnauthorizedException('Tài khoản của bạn đã bị khóa');
+    }
+    const { password: _, ...result } = user;
+    return result;
   }
 
-  // hàm tạo token
-  login(user: Omit<User, 'password'>) {
+  async login(loginDto: LoginDto) {
+    const { username, password } = loginDto;
+    const user = await this.validateUser(username, password);
     const payload = { username: user.username, sub: user.id };
     return {
       access_token: this.jwtService.sign(payload),
