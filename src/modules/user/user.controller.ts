@@ -1,13 +1,16 @@
 import {
+  Body,
   Controller,
   Get,
   NotFoundException,
   Param,
+  Post,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import { validate as isUUID } from 'uuid';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { RegisterUserDto } from './dto/register-user.dto';
 import { User } from './user.entity';
 import { UserService } from './user.service';
 
@@ -21,7 +24,8 @@ export class UserController {
     if (!req.user) {
       throw new NotFoundException(`User not found`);
     }
-    return req.user;
+    const userId = req.user.sub; // Lấy user ID từ JWT token
+    return this.userService.findId(userId);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -36,5 +40,10 @@ export class UserController {
     }
     const { password, ...result } = user;
     return result as User;
+  }
+
+  @Post('register')
+  async register(@Body() registerUserDto: RegisterUserDto): Promise<User> {
+    return this.userService.register(registerUserDto);
   }
 }
