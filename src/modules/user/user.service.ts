@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
 import { RegisterUserDto } from './dto/register-user.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { User } from './user.entity';
 
 @Injectable()
@@ -62,5 +63,42 @@ export class UserService {
     });
 
     return this.userRepository.save(newUser);
+  }
+  async updateUserProfile(
+    userId: string,
+    updateProfileDto: UpdateProfileDto,
+  ): Promise<{ message: string }> {
+    const user = await this.findId(userId);
+    const { email, isActive } = updateProfileDto;
+    if (email) {
+      user.email = email;
+    }
+    if (isActive !== undefined) {
+      user.isActive = isActive;
+    }
+    await this.userRepository.update(userId, updateProfileDto);
+    return { message: 'Cập nhật thông tin thành công' };
+  }
+
+  async changePassword(
+    userId: string,
+    oldPassword: string,
+    newPassword: string,
+  ): Promise<{ message: string }> {
+    const user = await this.findId(userId);
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      throw new BadRequestException('Mật khẩu cũ không đúng');
+    }
+    const saltRounds = Number(
+      this.configService.get<number>('BCRYPT_SALT_ROUNDS'),
+    );
+    if (isNaN(saltRounds)) {
+      throw new BadRequestException('BCRYPT_SALT_ROUNDS must be a number');
+    }
+    const salt = await bcrypt.genSalt(saltRounds);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    await this.userRepository.update(userId, { password: hashedPassword });
+    return { message: 'Đổi mật khẩu thành công' };
   }
 }
