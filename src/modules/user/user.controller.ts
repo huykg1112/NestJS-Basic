@@ -4,13 +4,17 @@ import {
   Get,
   NotFoundException,
   Param,
+  Patch,
   Post,
+  Put,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import { validate as isUUID } from 'uuid';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { RegisterUserDto } from './dto/register-user.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { User } from './user.entity';
 import { UserService } from './user.service';
 
@@ -45,5 +49,30 @@ export class UserController {
   @Post('register')
   async register(@Body() registerUserDto: RegisterUserDto): Promise<User> {
     return this.userService.register(registerUserDto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Put('profile')
+  async updateProfile(
+    @Req() req,
+    @Body() updateProfileDto: UpdateProfileDto,
+  ): Promise<{ message: string }> {
+    // Loại bỏ password và id
+    const userId = req.user.sub;
+    return await this.userService.updateUserProfile(userId, updateProfileDto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('change-password')
+  async changePassword(
+    @Req() req, // Lấy user ID từ JWT token
+    @Body() { oldPassword, newPassword }: ChangePasswordDto,
+  ): Promise<{ message: string }> {
+    const userId = req.user.sub;
+    return await this.userService.changePassword(
+      userId,
+      oldPassword,
+      newPassword,
+    );
   }
 }
