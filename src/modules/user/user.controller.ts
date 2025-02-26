@@ -28,13 +28,13 @@ export class UserController {
     if (!req.user) {
       throw new NotFoundException(`User not found`);
     }
-    const userId = req.user.sub; // Lấy user ID từ JWT token
+    const userId: string = req.user.sub as string; // Lấy user ID từ JWT token
     return this.userService.findId(userId);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get(':id')
-  async getUserById(@Param('id') id: string): Promise<User> {
+  async getUserById(@Param('id') id: string): Promise<Omit<User, 'password'>> {
     if (!isUUID(id)) {
       throw new NotFoundException(`Invalid ID format`);
     }
@@ -42,8 +42,7 @@ export class UserController {
     if (!user) {
       throw new NotFoundException(`User with id ${id} not found`);
     }
-    const { password, ...result } = user;
-    return result as User;
+    return user;
   }
 
   @Post('register')
@@ -58,7 +57,7 @@ export class UserController {
     @Body() updateProfileDto: UpdateProfileDto,
   ): Promise<{ message: string }> {
     // Loại bỏ password và id
-    const userId = req.user.sub;
+    const userId = req.user.sub as string;
     return await this.userService.updateUserProfile(userId, updateProfileDto);
   }
 
@@ -68,7 +67,7 @@ export class UserController {
     @Req() req, // Lấy user ID từ JWT token
     @Body() { oldPassword, newPassword }: ChangePasswordDto,
   ): Promise<{ message: string }> {
-    const userId = req.user.sub;
+    const userId = req.user.sub as string;
     return await this.userService.changePassword(
       userId,
       oldPassword,

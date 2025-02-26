@@ -43,7 +43,7 @@ export class UserService {
     if (isNaN(saltRounds)) {
       throw new BadRequestException('BCRYPT_SALT_ROUNDS must be a number');
     }
-    const salt = await bcrypt.genSalt(saltRounds);
+    const salt = (await bcrypt.genSalt(saltRounds)) as number;
     // Kiểm tra xem username hoặc email đã tồn tại chưa
     const existingUser = await this.userRepository.findOne({
       where: [{ username }, { email }],
@@ -53,7 +53,7 @@ export class UserService {
     }
 
     // Mã hóa mật khẩu
-    const hashedPassword = await bcrypt.hash(password, salt);
+    const hashedPassword = (await bcrypt.hash(password, salt)) as string;
 
     // Tạo user mới
     const newUser = this.userRepository.create({
@@ -86,7 +86,10 @@ export class UserService {
     newPassword: string,
   ): Promise<{ message: string }> {
     const user = await this.findId(userId);
-    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    const isMatch = (await bcrypt.compare(
+      oldPassword,
+      user.password,
+    )) as boolean;
     if (!isMatch) {
       throw new BadRequestException('Mật khẩu cũ không đúng');
     }
@@ -96,8 +99,8 @@ export class UserService {
     if (isNaN(saltRounds)) {
       throw new BadRequestException('BCRYPT_SALT_ROUNDS must be a number');
     }
-    const salt = await bcrypt.genSalt(saltRounds);
-    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    const salt = (await bcrypt.genSalt(saltRounds)) as number;
+    const hashedPassword = (await bcrypt.hash(newPassword, salt)) as string;
     await this.userRepository.update(userId, { password: hashedPassword });
     return { message: 'Đổi mật khẩu thành công' };
   }
