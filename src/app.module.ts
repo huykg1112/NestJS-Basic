@@ -5,10 +5,22 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
-import { CardModule } from './modules/card/card.module';
+import { CartItemsModule } from './modules/cart_items/cart_items.module';
+import { CategoriesModule } from './modules/categories/categories.module';
+import { FavoriteProductsModule } from './modules/favorite_products/favorite_products.module';
+import { InventorysModule } from './modules/inventorys/inventorys.module';
+import { OrderItemsModule } from './modules/order_items/order_items.module';
+import { OrdersModule } from './modules/orders/orders.module';
+import { PaymentsModule } from './modules/payments/payments.module';
+import { PermissionsModule } from './modules/permissions/permissions.module';
+import { ProductBatchesModule } from './modules/product_batches/product_batches.module';
+import { ProductImagesModule } from './modules/product_images/product_images.module';
 import { ProductsModule } from './modules/products/products.module';
-import { UserController } from './modules/user/user.controller';
-import { UserModule } from './modules/user/user.module';
+import { ReviewsModule } from './modules/reviews/reviews.module';
+import { RolePermissionsModule } from './modules/role_permissions/role_permissions.module';
+import { RolesModule } from './modules/roles/roles.module';
+import { UserController } from './modules/users/user.controller';
+import { UserModule } from './modules/users/user.module';
 
 @Module({
   imports: [
@@ -35,9 +47,21 @@ import { UserModule } from './modules/user/user.module';
       }),
     }),
     ProductsModule,
-    CardModule,
     AuthModule,
     UserModule,
+    RolesModule,
+    PermissionsModule,
+    RolePermissionsModule,
+    CategoriesModule,
+    ProductImagesModule,
+    ProductBatchesModule,
+    OrdersModule,
+    OrderItemsModule,
+    ReviewsModule,
+    FavoriteProductsModule,
+    CartItemsModule,
+    PaymentsModule,
+    InventorysModule,
   ],
   controllers: [AppController, UserController],
   providers: [AppService],

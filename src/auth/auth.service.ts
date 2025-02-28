@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt'; // Import bcrypt để so sánh mật khẩu
-import { UserService } from '../modules/user/user.service';
+import { UserService } from '../modules/users/user.service';
 import { LoginDto } from './dto/login.dto';
 
 @Injectable()

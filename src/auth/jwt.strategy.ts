@@ -2,8 +2,8 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { User } from '../modules/user/user.entity';
-import { UserService } from '../modules/user/user.service';
+import { User } from '../modules/users/entities/user.entity';
+import { UserService } from '../modules/users/user.service';
 
 interface JwtPayload {
   sub: string; // ID của user
