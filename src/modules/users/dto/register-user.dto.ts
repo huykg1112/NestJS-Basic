@@ -1,6 +1,7 @@
 import {
   IsEmail,
   IsNotEmpty,
+  IsOptional,
   IsString,
   Matches,
   MinLength,
@@ -12,17 +13,28 @@ export class RegisterUserDto {
   username: string;
 
   @IsNotEmpty()
-  @IsEmail({}, { message: 'Email không hợp lệ' }) // Kiểm tra email đúng định dạng
+  @IsEmail({}, { message: 'Email không hợp lệ' })
   email: string;
 
   @IsNotEmpty()
-  @MinLength(8, { message: 'Password phải có ít nhất 8 ký tự' })
-  @Matches(
-    /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/,
-    {
-      message:
-        'Password phải chứa ít nhất 1 chữ hoa, 1 chữ thường, 1 số và 1 ký tự đặc biệt',
-    },
-  )
+  @MinLength(6, { message: 'Password phải có ít nhất 6 ký tự' })
+  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{6,}$/, {
+    message:
+      'Password phải chứa ít nhất 1 chữ hoa, 1 chữ thường, 1 số và 1 ký tự đặc biệt',
+  })
   password: string;
+
+  @IsOptional()
+  @IsString()
+  fullName?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^\+?[1-9]\d{1,14}$/, { message: 'Số điện thoại không hợp lệ' })
+  phone?: string;
+
+  @IsOptional()
+  @IsString()
+  address?: string;
 }
+// Compare this snippet from src/modules/users/user.controller.ts:

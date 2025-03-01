@@ -5,6 +5,7 @@ import { Order } from '@modules/orders/entities/order.entity';
 import { Product } from '@modules/products/entities/product.entity';
 import { Review } from '@modules/reviews/entities/review.entity';
 import { Role } from '@modules/roles/entities/role.entity';
+import { Token } from '@modules/tokens/entities/token.entity'; // Thêm import
 import {
   Column,
   CreateDateColumn,
@@ -65,9 +66,12 @@ export class User {
   cartItems!: CartItem[];
 
   @OneToMany(() => Product, (product) => product.distributor)
-  products!: Product[]; // Distributor đăng sản phẩm
+  products!: Product[];
 
-  @OneToOne(() => Inventory, (inventory) => inventory.distributor) // Một User chỉ có 1 Inventory
-  @JoinColumn() // Đặt khóa ngoại trong bảng User
+  @OneToOne(() => Inventory, (inventory) => inventory.distributor)
+  @JoinColumn()
   inventory!: Inventory;
+
+  @OneToMany(() => Token, (token) => token.user) // Quan hệ OneToMany với Token
+  tokens!: Token[];
 }

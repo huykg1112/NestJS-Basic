@@ -10,8 +10,9 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { console } from 'inspector';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { validate as isUUID } from 'uuid';
-import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -29,7 +30,7 @@ export class UserController {
       throw new NotFoundException(`User not found`);
     }
     const userId: string = req.user.sub as string; // Lấy user ID từ JWT token
-    return this.userService.findId(userId);
+    return this.userService.findById(userId);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -38,7 +39,7 @@ export class UserController {
     if (!isUUID(id)) {
       throw new NotFoundException(`Invalid ID format`);
     }
-    const user = await this.userService.findId(id);
+    const user = await this.userService.findById(id);
     if (!user) {
       throw new NotFoundException(`User with id ${id} not found`);
     }
@@ -64,14 +65,16 @@ export class UserController {
   @UseGuards(JwtAuthGuard)
   @Patch('change-password')
   async changePassword(
-    @Req() req, // Lấy user ID từ JWT token
+    @Req() req,
     @Body() { oldPassword, newPassword }: ChangePasswordDto,
   ): Promise<{ message: string }> {
     const userId = req.user.sub as string;
+    const currentAccessToken = req.headers.authorization.split(' ')[1]; // Lấy token từ header
     return await this.userService.changePassword(
       userId,
       oldPassword,
       newPassword,
+      currentAccessToken,
     );
   }
 }

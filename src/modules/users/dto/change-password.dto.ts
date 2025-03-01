@@ -5,10 +5,11 @@ export class ChangePasswordDto {
   @IsString()
   oldPassword: string;
 
+  @IsNotEmpty()
   @IsString()
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{6,}$/, {
     message:
-      'Password must be at least 6 characters long, contain at least one uppercase letter, one lowercase letter, one number, and one special character',
+      'Password phải dài ít nhất 6 ký tự, chứa ít nhất 1 chữ hoa, 1 chữ thường, 1 số và 1 ký tự đặc biệt',
   })
   newPassword: string;
 }
