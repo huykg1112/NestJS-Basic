@@ -33,7 +33,6 @@ export class TokensService {
   }
 
   // Xóa tất cả token của user trừ token hiện tại
-  // Xóa tất cả token của user trừ token hiện tại
   async deleteAllExceptCurrent(
     userId: string,
     currentAccessToken: string,

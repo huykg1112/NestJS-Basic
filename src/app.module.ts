@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import { AppDataSource } from './data-source';
 import { CartItemsModule } from './modules/cart_items/cart_items.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { FavoriteProductsModule } from './modules/favorite_products/favorite_products.module';
@@ -28,15 +29,8 @@ import { UserModule } from './modules/users/user.module';
       isGlobal: true,
       envFilePath: '.env',
     }),
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: process.env.DB_HOST,
-      port: Number(process.env.DB_PORT),
-      username: process.env.DB_USERNAME,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME,
-      entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      synchronize: true, // Chỉ bật trong môi trường dev
+    TypeOrmModule.forRootAsync({
+      useFactory: async () => AppDataSource.options,
     }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -65,6 +59,6 @@ import { UserModule } from './modules/users/user.module';
     TokensModule,
   ],
   controllers: [AppController],
-  providers: [AppService], // Xóa JwtAuthGuard và TokenService
+  providers: [AppService],
 })
 export class AppModule {}

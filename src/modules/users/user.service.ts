@@ -88,8 +88,8 @@ export class UserService {
     const { fullName, email, phone, address, isActive } = updateProfileDto;
     if (fullName !== undefined) user.fullName = fullName;
     if (email !== undefined) user.email = email;
-    if (phone !== undefined) user.phone = phone;
-    if (address !== undefined) user.address = address;
+    // if (phone !== undefined) user.phone = phone;
+    // if (address !== undefined) user.address = address;
     if (isActive !== undefined) user.isActive = isActive;
 
     await this.userRepository.save(user); // Sử dụng save thay vì update để cập nhật toàn bộ entity
