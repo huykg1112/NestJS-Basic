@@ -19,7 +19,7 @@ import { ProductsModule } from './modules/products/products.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { RolePermissionsModule } from './modules/role_permissions/role_permissions.module';
 import { RolesModule } from './modules/roles/roles.module';
-import { UserController } from './modules/users/user.controller';
+import { TokensModule } from './modules/tokens/tokens.module';
 import { UserModule } from './modules/users/user.module';
 
 @Module({
@@ -29,7 +29,7 @@ import { UserModule } from './modules/users/user.module';
       envFilePath: '.env',
     }),
     TypeOrmModule.forRoot({
-      type: 'postgres', // Hoặc 'mysql'
+      type: 'postgres',
       host: process.env.DB_HOST,
       port: Number(process.env.DB_PORT),
       username: process.env.DB_USERNAME,
@@ -62,8 +62,9 @@ import { UserModule } from './modules/users/user.module';
     CartItemsModule,
     PaymentsModule,
     InventorysModule,
+    TokensModule,
   ],
-  controllers: [AppController, UserController],
-  providers: [AppService],
+  controllers: [AppController],
+  providers: [AppService], // Xóa JwtAuthGuard và TokenService
 })
 export class AppModule {}
