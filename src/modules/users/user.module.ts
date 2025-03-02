@@ -1,7 +1,8 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { RolesModule } from '../roles/roles.module';
 import { TokensModule } from '../tokens/tokens.module';
 import { User } from './entities/user.entity';
 import { UserController } from './user.controller';
@@ -18,7 +19,9 @@ import { UserService } from './user.service';
         signOptions: { expiresIn: '1h' },
       }),
     }),
-    TokensModule, // Ensure TokensModule is imported
+    ConfigModule,
+    forwardRef(() => TokensModule), // Ensure TokensModule is imported
+    RolesModule, // Ensure RolesModule is imported
   ],
   providers: [UserService], // Remove TokensService from providers
   controllers: [UserController],

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   NotFoundException,
   Param,
@@ -10,14 +11,15 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { console } from 'inspector';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { validate as isUUID } from 'uuid';
+import { AssignRoleDto } from './dto/assign-role.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { User } from './entities/user.entity';
 import { UserService } from './user.service';
+// import { RequirePermission } from 'src/auth/require-permission.decorator';
 
 @Controller('user')
 export class UserController {
@@ -29,7 +31,8 @@ export class UserController {
     if (!req.user) {
       throw new NotFoundException(`User not found`);
     }
-    const userId: string = req.user.sub as string; // Lấy user ID từ JWT token
+    const userId: string = req.user.id as string;
+    // console.log(req.user);
     return this.userService.findById(userId);
   }
 
@@ -57,8 +60,7 @@ export class UserController {
     @Req() req,
     @Body() updateProfileDto: UpdateProfileDto,
   ): Promise<{ message: string }> {
-    // Loại bỏ password và id
-    const userId = req.user.sub as string;
+    const userId = req.user.id as string;
     return await this.userService.updateUserProfile(userId, updateProfileDto);
   }
 
@@ -68,13 +70,49 @@ export class UserController {
     @Req() req,
     @Body() { oldPassword, newPassword }: ChangePasswordDto,
   ): Promise<{ message: string }> {
-    const userId = req.user.sub as string;
-    const currentAccessToken = req.headers.authorization.split(' ')[1]; // Lấy token từ header
+    const userId = req.user.id as string;
+    const currentAccessToken = req.headers.authorization.split(' ')[1];
     return await this.userService.changePassword(
       userId,
       oldPassword,
       newPassword,
       currentAccessToken,
     );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Put('assign-role')
+  // @RequirePermission('assign_role')
+  async assignRoleToUser(
+    @Req() req,
+    @Body() assignRoleDto: AssignRoleDto,
+  ): Promise<{ message: string; user: User }> {
+    const userId = assignRoleDto.userId || (req.user.id as string);
+    const updatedUser = await this.userService.assignRole(
+      userId,
+      assignRoleDto,
+    );
+    return { message: 'Phân vai trò thành công', user: updatedUser };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('role/get')
+  // @RequirePermission('view_role')
+  async getUserRole(
+    @Req() req,
+  ): Promise<{ role: { id: string; name: string } }> {
+    const userId = req.user.id as string;
+    return this.userService.getUserRole(userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id/role')
+  // @RequirePermission('remove_role')
+  async removeUserRole(@Param('id') id: string): Promise<{ message: string }> {
+    if (!isUUID(id)) {
+      throw new NotFoundException('Định dạng ID không hợp lệ');
+    }
+    await this.userService.removeRole(id);
+    return { message: 'Xóa vai trò thành công' };
   }
 }

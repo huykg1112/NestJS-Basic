@@ -21,6 +21,10 @@ export class UpdateProfileDto {
   address?: string;
 
   @IsOptional()
+  @IsString()
+  avatar?: string;
+
+  @IsOptional()
   @IsBoolean({ message: 'isActive phải là boolean' })
   isActive?: boolean;
 }

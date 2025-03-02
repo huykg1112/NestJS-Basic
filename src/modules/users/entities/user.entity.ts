@@ -41,6 +41,12 @@ export class User {
   @Column({ type: 'varchar', length: 500, nullable: true })
   address!: string;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  avatar!: string;
+
+  @Column({ type: 'boolean', default: false })
+  isVerified!: boolean;
+
   @Column({ type: 'boolean', default: true })
   isActive!: boolean;
 
@@ -51,6 +57,7 @@ export class User {
   updatedAt!: Date;
 
   @ManyToOne(() => Role, (role) => role.users)
+  @JoinColumn({ name: 'role_id' }) // Chỉ định khóa ngoại nằm ở bảng User
   role!: Role;
 
   @OneToMany(() => Order, (order) => order.user)

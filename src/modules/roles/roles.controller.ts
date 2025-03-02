@@ -1,34 +1,67 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { RolesService } from './roles.service';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  NotFoundException,
+  Param,
+  Patch,
+  Post,
+  Put,
+} from '@nestjs/common';
+import { isUUID } from 'class-validator';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
+import { RolesService } from './roles.service';
 
 @Controller('roles')
 export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
 
-  @Post()
-  create(@Body() createRoleDto: CreateRoleDto) {
-    return this.rolesService.create(createRoleDto);
+  //Lấy Role theo ID
+  @Get('id/:id')
+  async findById(@Param('id') id: string) {
+    if (!isUUID(id)) {
+      throw new NotFoundException(`Invalid ID format`);
+    }
+    return this.rolesService.findById(id);
   }
-
-  @Get()
-  findAll() {
+  //Lấy Role theo Name
+  @Get('name/:name')
+  async findByName(@Param('name') name: string) {
+    return this.rolesService.findByName(name);
+  }
+  //Lấy tất cả Role
+  @Get('all')
+  async findAll() {
     return this.rolesService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.rolesService.findOne(+id);
+  //Tạo Role
+  @Post('create')
+  async createRole(@Body() createRoleDto: CreateRoleDto) {
+    return this.rolesService.createRole(createRoleDto);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateRoleDto: UpdateRoleDto) {
-    return this.rolesService.update(+id, updateRoleDto);
+  //Cập nhật Role
+  @Put('update/:id')
+  async updateRole(
+    @Param('id') id: string,
+    @Body() updateRoleDto: UpdateRoleDto,
+  ) {
+    return this.rolesService.updateRole(id, updateRoleDto);
   }
+
+  //Bật hoặc tắt trạng thái của Role
+  @Patch('toggle-active/:id')
+  async toggleActive(@Param('id') id: string) {
+    return this.rolesService.toggleActive(id);
+  }
+
+  //Xóa Role
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.rolesService.remove(+id);
+  async deleteRole(@Param('id') id: string) {
+    return this.rolesService.deleteRole(id);
   }
 }
