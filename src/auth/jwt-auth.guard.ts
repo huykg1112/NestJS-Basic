@@ -27,7 +27,7 @@ export class JwtAuthGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const authHeader = request.headers.authorization as string;
 
-    console.log('sadasdas ád', authHeader);
+    // console.log('sadasdas ád', authHeader);
     // Kiểm tra header Authorization
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       throw new UnauthorizedException('Token không hợp lệ hoặc thiếu');
