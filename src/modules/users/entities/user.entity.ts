@@ -41,9 +41,6 @@ export class User {
   @Column({ type: 'varchar', length: 500, nullable: true })
   address!: string;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  avatar!: string;
-
   @Column({ type: 'boolean', default: true })
   isActive!: boolean;
 
