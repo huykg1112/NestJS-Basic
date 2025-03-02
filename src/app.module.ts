@@ -36,7 +36,7 @@ import { UserModule } from './modules/users/user.module';
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      synchronize: true, // Chỉ bật trong môi trường dev
+      synchronize: true,
     }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -49,9 +49,9 @@ import { UserModule } from './modules/users/user.module';
     ProductsModule,
     AuthModule,
     UserModule,
-    RolesModule,
-    PermissionsModule,
-    RolePermissionsModule,
+    RolesModule, // Already included
+    PermissionsModule, // Already included
+    RolePermissionsModule, // Already included
     CategoriesModule,
     ProductImagesModule,
     ProductBatchesModule,
@@ -65,6 +65,6 @@ import { UserModule } from './modules/users/user.module';
     TokensModule,
   ],
   controllers: [AppController],
-  providers: [AppService], // Xóa JwtAuthGuard và TokenService
+  providers: [AppService],
 })
 export class AppModule {}

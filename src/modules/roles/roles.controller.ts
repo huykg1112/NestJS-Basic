@@ -54,14 +54,35 @@ export class RolesController {
 
   //Bật hoặc tắt trạng thái của Role
   @Patch('toggle-active/:id')
-  async toggleActive(@Param('id') id: string) {
-    return this.rolesService.toggleActive(id);
+  async toggleActive(@Param('id') id: string): Promise<{ message: string }> {
+    const role = await this.rolesService.toggleActive(id);
+    if (role.isActive) {
+      return { message: 'Role đã được kích hoạt' };
+    } else {
+      return { message: 'Role đã được tắt' };
+    }
   }
 
   //Xóa Role
 
-  @Delete(':id')
-  async deleteRole(@Param('id') id: string) {
-    return this.rolesService.deleteRole(id);
+  @Delete('delete/:id')
+  async deleteRole(@Param('id') id: string): Promise<{ message: string }> {
+    await this.rolesService.deleteRole(id);
+    return { message: 'Role đã được xóa' };
+  }
+
+  //Lấy tất cả RolePermission của Role
+  @Get('role-permissions/:id')
+  async getRolePermissions(@Param('id') id: string) {
+    return this.rolesService.getRolePermissions(id);
+  }
+
+  //Thêm Permission vào Role
+  @Post('assign-permission')
+  async assignPermissionToRole(
+    @Body('roleId') roleId: string,
+    @Body('permissionId') permissionId: string,
+  ) {
+    return this.rolesService.assignPermissionToRole(roleId, permissionId);
   }
 }

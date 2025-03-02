@@ -1,34 +1,32 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { RolePermissionsService } from './role_permissions.service';
-import { CreateRolePermissionDto } from './dto/create-role_permission.dto';
-import { UpdateRolePermissionDto } from './dto/update-role_permission.dto';
+import { Controller, Delete, Param, Post } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { RolePermission } from './entities/role_permission.entity';
+import { RolePermissionService } from './role_permissions.service';
 
-@Controller('role-permissions')
+@Controller('roles/:roleId/permissions')
 export class RolePermissionsController {
-  constructor(private readonly rolePermissionsService: RolePermissionsService) {}
+  constructor(
+    @InjectRepository(RolePermission)
+    private readonly RolePermissionService: RolePermissionService,
+  ) {}
 
-  @Post()
-  create(@Body() createRolePermissionDto: CreateRolePermissionDto) {
-    return this.rolePermissionsService.create(createRolePermissionDto);
+  @Post(':permissionId')
+  async addPermissionToRole(
+    @Param('roleId') roleId: string,
+    @Param('permissionId') permissionId: string,
+  ) {
+    return this.RolePermissionService.addPermissionToRole(roleId, permissionId);
   }
 
-  @Get()
-  findAll() {
-    return this.rolePermissionsService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.rolePermissionsService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateRolePermissionDto: UpdateRolePermissionDto) {
-    return this.rolePermissionsService.update(+id, updateRolePermissionDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.rolePermissionsService.remove(+id);
+  @Delete(':permissionId')
+  async removePermissionFromRole(
+    @Param('roleId') roleId: string,
+    @Param('permissionId') permissionId: string,
+  ) {
+    await this.RolePermissionService.removePermissionFromRole(
+      roleId,
+      permissionId,
+    );
+    return { message: 'Permission removed from role successfully' };
   }
 }

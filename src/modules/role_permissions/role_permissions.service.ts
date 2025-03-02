@@ -1,26 +1,75 @@
-import { Injectable } from '@nestjs/common';
-import { CreateRolePermissionDto } from './dto/create-role_permission.dto';
-import { UpdateRolePermissionDto } from './dto/update-role_permission.dto';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Permission } from '../permissions/entities/permission.entity';
+import { Role } from '../roles/entities/role.entity';
+import { RolePermission } from './entities/role_permission.entity';
 
 @Injectable()
-export class RolePermissionsService {
-  create(createRolePermissionDto: CreateRolePermissionDto) {
-    return 'This action adds a new rolePermission';
+export class RolePermissionService {
+  constructor(
+    @InjectRepository(RolePermission)
+    private readonly rolePermissionRepository: Repository<RolePermission>,
+    @InjectRepository(Role)
+    private readonly roleRepository: Repository<Role>,
+    @InjectRepository(Permission)
+    private readonly permissionRepository: Repository<Permission>,
+  ) {}
+
+  async addPermissionToRole(
+    roleId: string,
+    permissionId: string,
+  ): Promise<RolePermission> {
+    const role = await this.roleRepository.findOne({ where: { id: roleId } });
+    if (!role) {
+      throw new NotFoundException(`Không tìm thấy role với id ${roleId}`);
+    }
+    const permission = await this.permissionRepository.findOne({
+      where: { id: permissionId },
+    });
+    if (!permission) {
+      throw new NotFoundException(
+        `Không tìm thấy permission với id ${permissionId}`,
+      );
+    }
+    const rolePermission = this.rolePermissionRepository.create({
+      role,
+      permission,
+    });
+    return this.rolePermissionRepository.save(rolePermission);
   }
 
-  findAll() {
-    return `This action returns all rolePermissions`;
+  async removePermissionFromRole(
+    roleId: string,
+    permissionId: string,
+  ): Promise<void> {
+    const rolePermission = await this.rolePermissionRepository.findOne({
+      where: { role: { id: roleId }, permission: { id: permissionId } },
+    });
+    if (!rolePermission) {
+      throw new NotFoundException('RolePermission not found');
+    }
+    await this.rolePermissionRepository.remove(rolePermission);
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} rolePermission`;
+  async findByRoleId(roleId: string): Promise<RolePermission[]> {
+    return this.rolePermissionRepository.find({
+      where: { role: { id: roleId } },
+      relations: ['permission'],
+    });
   }
 
-  update(id: number, updateRolePermissionDto: UpdateRolePermissionDto) {
-    return `This action updates a #${id} rolePermission`;
+  async findByPermissionId(permissionId: string): Promise<RolePermission[]> {
+    return this.rolePermissionRepository.find({
+      where: { permission: { id: permissionId } },
+      relations: ['role'],
+    });
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} rolePermission`;
+  async findByNameRole(name: string): Promise<RolePermission[]> {
+    return this.rolePermissionRepository.find({
+      where: { role: { name } },
+      relations: ['permission'],
+    });
   }
 }

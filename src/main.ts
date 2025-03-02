@@ -6,6 +6,7 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  console.log('Application is running on: http://localhost:3000');
 
   await AppDataSource.initialize(); // Initialize the DataSource
   // Bật CORS

@@ -22,7 +22,7 @@ export class UserService {
     private readonly userRepository: Repository<User>,
     private readonly configService: ConfigService,
     private readonly tokenService: TokensService,
-    private readonly roleService: RolesService,
+    private readonly rolesService: RolesService,
   ) {}
 
   async findByUsername(username: string): Promise<User> {
@@ -72,13 +72,13 @@ export class UserService {
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     // Tìm hoặc tạo vai trò mặc định "Client"
-    let role = await this.roleService.findByName('Client');
+    let role = await this.rolesService.findByName('Client');
     if (!role) {
       const createRoleDto: CreateRoleDto = {
         name: 'Client',
         description: 'Vai trò mặc định cho khách hàng',
       };
-      role = await this.roleService.createRole(createRoleDto);
+      role = await this.rolesService.createRole(createRoleDto);
     }
 
     // Tạo user mới và gán vai trò "Client"
@@ -157,7 +157,7 @@ export class UserService {
       );
     }
 
-    const role = await this.roleService.findById(assignRoleDto.roleId);
+    const role = await this.rolesService.findById(assignRoleDto.roleId);
     if (!role || !role.isActive) {
       throw new BadRequestException(
         `Vai trò với ID ${assignRoleDto.roleId} không hợp lệ hoặc đã bị khóa`,
@@ -185,7 +185,7 @@ export class UserService {
 
   async removeRole(userId: string): Promise<User> {
     const user = await this.findById(userId);
-    const roleClient = await this.roleService.findByName('Client');
+    const roleClient = await this.rolesService.findByName('Client');
     if (!user) {
       throw new NotFoundException(
         `Người dùng với ID ${userId} không được tìm thấy`,

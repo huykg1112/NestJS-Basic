@@ -21,7 +21,7 @@ import { UserService } from './user.service';
     }),
     ConfigModule,
     forwardRef(() => TokensModule), // Ensure TokensModule is imported
-    RolesModule, // Ensure RolesModule is imported
+    forwardRef(() => RolesModule), // Ensure RolesModule is imported
   ],
   providers: [UserService], // Remove TokensService from providers
   controllers: [UserController],
