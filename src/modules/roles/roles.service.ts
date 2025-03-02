@@ -29,8 +29,8 @@ export class RolesService {
 
   async createRole(createRoleDto: CreateRoleDto): Promise<Role> {
     const { name, description } = createRoleDto;
-    const exitingRole = await this.findByName(name);
-    if (exitingRole) {
+    const existingRole = await this.roleRepository.findOne({ where: { name } });
+    if (existingRole) {
       throw new NotFoundException(`Role ${name} đã tồn tại`);
     }
     const role = new Role();
@@ -51,14 +51,14 @@ export class RolesService {
     return this.roleRepository.save(role);
   }
 
-  // Bật hoặc tắt trạng thái của role
+  // Bật hoặc tắt trạng thái của Role
   async toggleActive(id: string): Promise<Role> {
     const role = await this.findById(id);
     role.isActive = !role.isActive;
     return this.roleRepository.save(role);
   }
 
-  // Xóa role
+  // Xóa Role
   async deleteRole(id: string): Promise<Role> {
     const role = await this.findById(id);
     return this.roleRepository.remove(role);

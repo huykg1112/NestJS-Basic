@@ -1,11 +1,11 @@
 import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateRoleDto {
-  @IsString()
+  @IsString({ message: 'Tên phải là chuỗi' })
   @IsNotEmpty({ message: 'Tên không được để trống' })
   name: string;
 
-  @IsString()
+  @IsString({ message: 'Mô tả phải là chuỗi' })
   @IsOptional()
   description: string;
 }

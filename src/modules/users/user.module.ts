@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -20,7 +20,7 @@ import { UserService } from './user.service';
       }),
     }),
     ConfigModule,
-    TokensModule, // Ensure TokensModule is imported,
+    forwardRef(() => TokensModule), // Ensure TokensModule is imported
     RolesModule, // Ensure RolesModule is imported
   ],
   providers: [UserService], // Remove TokensService from providers

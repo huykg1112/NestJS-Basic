@@ -3,11 +3,13 @@ import {
   Controller,
   Delete,
   Get,
+  NotFoundException,
   Param,
   Patch,
   Post,
   Put,
 } from '@nestjs/common';
+import { isUUID } from 'class-validator';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { RolesService } from './roles.service';
@@ -19,6 +21,9 @@ export class RolesController {
   //Lấy Role theo ID
   @Get('id/:id')
   async findById(@Param('id') id: string) {
+    if (!isUUID(id)) {
+      throw new NotFoundException(`Invalid ID format`);
+    }
     return this.rolesService.findById(id);
   }
   //Lấy Role theo Name
