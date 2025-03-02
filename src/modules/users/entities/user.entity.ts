@@ -53,7 +53,7 @@ export class User {
   @UpdateDateColumn({ type: 'timestamp', nullable: true })
   updatedAt!: Date;
 
-  @ManyToOne(() => Role, (role) => role.users)
+  @OneToOne(() => Role, (role) => role.users)
   role!: Role;
 
   @OneToMany(() => Order, (order) => order.user)

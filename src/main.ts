@@ -2,10 +2,12 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import 'module-alias/register';
 import { AppModule } from './app.module';
+import { AppDataSource } from './data-source';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  await AppDataSource.initialize(); // Initialize the DataSource
   // Bật CORS
   app.enableCors({
     origin: [
