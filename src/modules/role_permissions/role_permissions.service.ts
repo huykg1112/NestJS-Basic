@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Permission } from '../permissions/entities/permission.entity';
@@ -32,6 +36,14 @@ export class RolePermissionService {
         `Không tìm thấy permission với id ${permissionId}`,
       );
     }
+    const existingRolePermission = await this.rolePermissionRepository.findOne({
+      where: { role: { id: roleId }, permission: { id: permissionId } },
+    });
+    if (existingRolePermission) {
+      throw new BadRequestException(
+        `Permission ${permissionId} đã được gán cho role ${roleId}`,
+      );
+    }
     const rolePermission = this.rolePermissionRepository.create({
       role,
       permission,
@@ -56,6 +68,7 @@ export class RolePermissionService {
     return this.rolePermissionRepository.find({
       where: { role: { id: roleId } },
       relations: ['permission'],
+      select: ['id', 'createdAt', 'updatedAt'],
     });
   }
 
@@ -63,6 +76,7 @@ export class RolePermissionService {
     return this.rolePermissionRepository.find({
       where: { permission: { id: permissionId } },
       relations: ['role'],
+      select: ['id', 'createdAt', 'updatedAt'],
     });
   }
 

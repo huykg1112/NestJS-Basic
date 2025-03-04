@@ -9,4 +9,9 @@ export class AppController {
   getHello(): string {
     return this.appService.getHello();
   }
+  // Lý do: Thêm endpoint health check để kiểm tra trạng thái ứng dụng
+  @Get('health')
+  healthCheck(): { status: string; timestamp: number } {
+    return { status: 'ok', timestamp: Date.now() };
+  }
 }

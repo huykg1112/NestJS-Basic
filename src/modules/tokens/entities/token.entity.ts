@@ -2,6 +2,7 @@ import { User } from '@modules/users/entities/user.entity';
 import {
   Column,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -12,12 +13,14 @@ export class Token {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
+  @Index()
   @Column({ type: 'varchar', length: 500, nullable: true })
   accessToken?: string;
 
   @Column({ type: 'timestamp', nullable: true })
   accessTokenExpiresAt?: Date;
 
+  @Index()
   @Column({ type: 'varchar', length: 500, nullable: true })
   refreshToken?: string;
 

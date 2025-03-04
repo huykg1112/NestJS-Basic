@@ -10,6 +10,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   OneToMany,
@@ -23,12 +24,14 @@ export class User {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
+  @Index()
   @Column({ type: 'varchar', length: 100 })
   username!: string;
 
   @Column({ type: 'varchar', length: 100 })
   password!: string;
 
+  @Index()
   @Column({ type: 'varchar', length: 255, nullable: true })
   email!: string;
 

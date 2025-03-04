@@ -17,7 +17,10 @@ export class TokensService {
 
   // Tìm token cụ thể bằng accessToken
   async findByAccessToken(accessToken: string): Promise<Token | null> {
-    return this.tokenRepository.findOne({ where: { accessToken } });
+    return this.tokenRepository.findOne({
+      where: { accessToken },
+      relations: ['user'],
+    });
   }
 
   async save(token: Token): Promise<Token> {
@@ -33,12 +36,11 @@ export class TokensService {
   }
 
   // Xóa tất cả token của user trừ token hiện tại
-  // Xóa tất cả token của user trừ token hiện tại
   async deleteAllExceptCurrent(
     userId: string,
     currentAccessToken: string,
   ): Promise<void> {
-    await this.tokenRepository
+    const result = await this.tokenRepository
       .createQueryBuilder()
       .delete()
       .from(Token)
@@ -46,7 +48,10 @@ export class TokensService {
         userId,
         currentAccessToken,
       })
-      .execute();
+      .execute(); // Thực thi truy vấn
+    if (result.affected === 0) {
+      console.warn(`No tokens deleted for user ${userId}`); // Lý do: Log cảnh báo nếu không có token nào bị xóa
+    }
   }
 
   async createForUser(
@@ -62,5 +67,18 @@ export class TokensService {
       user: { id: userId },
     });
     return this.tokenRepository.save(token);
+  }
+  // Xóa token hết hạn
+  async cleanExpiredTokens(): Promise<void> {
+    const now = new Date();
+    await this.tokenRepository
+      .createQueryBuilder()
+      .delete()
+      .from(Token)
+      .where(
+        '"accessTokenExpiresAt" < :now OR "refreshTokenExpiresAt" < :now',
+        { now },
+      )
+      .execute();
   }
 }

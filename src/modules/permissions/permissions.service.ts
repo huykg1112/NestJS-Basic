@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { isUUID } from 'class-validator';
 import { Repository } from 'typeorm';
@@ -21,17 +25,17 @@ export class PermissionsService {
   async createPermission(
     createPermissionDto: CreatePermissionDto,
   ): Promise<Permission> {
-    const { name, description } = createPermissionDto;
+    const { name, description, isActive } = createPermissionDto;
     const existingPermission = await this.permissionRepository.findOne({
       where: { name },
     });
     if (existingPermission) {
-      throw new NotFoundException(`Permission ${name} đã tồn tại`);
+      throw new BadRequestException(`Permission ${name} đã tồn tại`);
     }
     const permission = this.permissionRepository.create({
       name,
       description,
-      isActive: true,
+      isActive: isActive !== undefined ? isActive : true,
     });
     const savedPermission = await this.permissionRepository.save(permission);
 
@@ -60,15 +64,20 @@ export class PermissionsService {
     updatePermissionDto: UpdatePermissionDto,
   ): Promise<Permission> {
     const permission = await this.findById(id);
-    if (!permission) {
-      throw new NotFoundException(`Không tìm thấy permission với id ${id}`);
+    if (
+      updatePermissionDto.name &&
+      updatePermissionDto.name !== permission.name
+    ) {
+      const existingPermission = await this.permissionRepository.findOne({
+        where: { name: updatePermissionDto.name },
+      });
+      if (existingPermission && existingPermission.id !== id) {
+        throw new BadRequestException(
+          `Permission ${updatePermissionDto.name} đã tồn tại`,
+        );
+      }
     }
-    if (updatePermissionDto.name !== undefined)
-      permission.name = updatePermissionDto.name;
-    if (updatePermissionDto.description !== undefined)
-      permission.description = updatePermissionDto.description;
-    if (updatePermissionDto.isActive !== undefined)
-      permission.isActive = updatePermissionDto.isActive;
+    Object.assign(permission, updatePermissionDto);
     return this.permissionRepository.save(permission);
   }
 
@@ -80,11 +89,20 @@ export class PermissionsService {
 
   async deletePermission(id: string): Promise<void> {
     const permission = await this.findById(id);
+    const rolePermissions =
+      await this.rolePermissionService.findByPermissionId(id);
+    await Promise.all(
+      rolePermissions.map((rp) =>
+        this.rolePermissionService.removePermissionFromRole(rp.role.id, id),
+      ),
+    );
     await this.permissionRepository.remove(permission);
   }
 
-  async findAll() {
-    return this.permissionRepository.find();
+  async findAll(): Promise<Permission[]> {
+    return this.permissionRepository.find({
+      select: ['id', 'name', 'description', 'isActive'], //  Chỉ lấy các trường cần thiết để giảm tải
+    });
   }
 
   async findById(id: string): Promise<Permission> {

@@ -5,12 +5,14 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { TokensService } from '../modules/tokens/tokens.service';
 import { UserService } from '../modules/users/user.service';
+import { IS_PUBLIC_KEY } from '../public.decorator'; // Import key mặc định
 
 interface JwtPayload {
-  sub: string; // ID của user
+  sub: string;
   username: string;
 }
 
@@ -21,14 +23,26 @@ export class JwtAuthGuard implements CanActivate {
     private readonly configService: ConfigService,
     private readonly tokenService: TokensService,
     private readonly userService: UserService,
+    private readonly reflector: Reflector,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    // Lấy IS_PUBLIC_KEY từ .env, nếu không có thì dùng giá trị mặc định từ auth.decorator.ts
+    const publicKey =
+      this.configService.get<string>('IS_PUBLIC_KEY') ?? IS_PUBLIC_KEY;
+
+    // Kiểm tra metadata với key từ .env
+    const isPublic = this.reflector.getAllAndOverride<boolean>(publicKey, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (isPublic) {
+      return true; // Cho phép truy cập route công khai
+    }
+
     const request = context.switchToHttp().getRequest();
     const authHeader = request.headers.authorization as string;
 
-    // console.log('sadasdas ád', authHeader);
-    // Kiểm tra header Authorization
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       throw new UnauthorizedException('Token không hợp lệ hoặc thiếu');
     }
@@ -36,7 +50,6 @@ export class JwtAuthGuard implements CanActivate {
     const token = authHeader.split(' ')[1];
 
     try {
-      // Xác minh JWT (tương tự JwtStrategy)
       const secret =
         this.configService.get<string>('JWT_SECRET') ?? 'mysecretkey';
       const decoded: JwtPayload = this.jwtService.verify(token, { secret });
@@ -45,16 +58,17 @@ export class JwtAuthGuard implements CanActivate {
         throw new UnauthorizedException('Invalid token payload');
       }
 
-      // Kiểm tra user (tương tự validate trong JwtStrategy)
-      const user = await this.userService.findById(decoded.sub);
+      const [user, storedToken] = await Promise.all([
+        this.userService.findById(decoded.sub),
+        this.tokenService.findByAccessToken(token),
+      ]);
+
       if (!user || !user.isActive) {
         throw new UnauthorizedException(
           'Người dùng không tồn tại hoặc bị khóa',
         );
       }
 
-      // Kiểm tra token trong bảng Token (tương tự JwtAuthGuard cũ)
-      const storedToken = await this.tokenService.findByAccessToken(token);
       if (
         !storedToken ||
         storedToken.accessToken !== token ||
@@ -66,12 +80,14 @@ export class JwtAuthGuard implements CanActivate {
         );
       }
 
-      // Gán thông tin user vào request (loại bỏ password)
       const { password, ...result } = user;
       request.user = result;
 
       return true;
     } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
       throw new UnauthorizedException('Token không hợp lệ hoặc đã hết hạn');
     }
   }

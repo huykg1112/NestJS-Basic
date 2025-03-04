@@ -10,16 +10,8 @@ import { UserModule } from '../users/user.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Token]),
-    JwtModule.registerAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET'),
-        signOptions: { expiresIn: '1h' },
-      }),
-    }),
     ConfigModule,
-    forwardRef(() => UserModule), // Ensure TokensModule is imported,
+    forwardRef(() => UserModule),
   ],
   providers: [TokensService],
   controllers: [TokensController],

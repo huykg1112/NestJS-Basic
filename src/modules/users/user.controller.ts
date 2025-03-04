@@ -9,9 +9,8 @@ import {
   Post,
   Put,
   Req,
-  UseGuards,
 } from '@nestjs/common';
-import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { Public } from '@root/src/public.decorator';
 import { validate as isUUID } from 'uuid';
 import { AssignRoleDto } from './dto/assign-role.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -25,18 +24,13 @@ import { UserService } from './user.service';
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @UseGuards(JwtAuthGuard)
   @Get('profile')
   async getProfile(@Req() req): Promise<Omit<User, 'password'>> {
-    if (!req.user) {
-      throw new NotFoundException(`User not found`);
-    }
     const userId: string = req.user.id as string;
     // console.log(req.user);
     return this.userService.findById(userId);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get(':id')
   async getUserById(@Param('id') id: string): Promise<Omit<User, 'password'>> {
     if (!isUUID(id)) {
@@ -49,53 +43,59 @@ export class UserController {
     return user;
   }
 
+  @Public()
   @Post('register')
-  async register(@Body() registerUserDto: RegisterUserDto): Promise<User> {
-    return this.userService.register(registerUserDto);
+  async register(
+    @Body() registerUserDto: RegisterUserDto,
+  ): Promise<Partial<User>> {
+    // Partial<User> để trả về một phần của User
+    const user = await this.userService.register(registerUserDto);
+    const { password, ...result } = user;
+    return result;
   }
 
-  @UseGuards(JwtAuthGuard)
   @Put('profile')
   async updateProfile(
     @Req() req,
     @Body() updateProfileDto: UpdateProfileDto,
   ): Promise<{ message: string }> {
     const userId = req.user.id as string;
-    return await this.userService.updateUserProfile(userId, updateProfileDto);
+    return this.userService.updateUserProfile(userId, updateProfileDto);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Patch('change-password')
   async changePassword(
     @Req() req,
-    @Body() { oldPassword, newPassword }: ChangePasswordDto,
+    @Body() changePasswordDto: ChangePasswordDto,
   ): Promise<{ message: string }> {
     const userId = req.user.id as string;
     const currentAccessToken = req.headers.authorization.split(' ')[1];
+    if (!currentAccessToken) {
+      throw new NotFoundException('Authorization header missing'); // Lý do: Kiểm tra header để tránh lỗi split undefined
+    }
     return await this.userService.changePassword(
       userId,
-      oldPassword,
-      newPassword,
+      changePasswordDto.oldPassword,
+      changePasswordDto.newPassword,
       currentAccessToken,
     );
   }
 
-  @UseGuards(JwtAuthGuard)
   @Put('assign-role')
   // @RequirePermission('assign_role')
   async assignRoleToUser(
     @Req() req,
     @Body() assignRoleDto: AssignRoleDto,
-  ): Promise<{ message: string; user: User }> {
-    const userId = assignRoleDto.userId || (req.user.id as string);
+  ): Promise<{ message: string; user: Omit<User, 'password'> }> {
+    const userId = assignRoleDto.userId || req.user.id;
     const updatedUser = await this.userService.assignRole(
       userId,
       assignRoleDto,
     );
-    return { message: 'Phân vai trò thành công', user: updatedUser };
+    const { password, ...result } = updatedUser;
+    return { message: 'Phân vai trò thành công', user: result };
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get('role/get')
   // @RequirePermission('view_role')
   async getUserRole(
@@ -105,12 +105,11 @@ export class UserController {
     return this.userService.getUserRole(userId);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Delete(':id/role')
   // @RequirePermission('remove_role')
   async removeUserRole(@Param('id') id: string): Promise<{ message: string }> {
     if (!isUUID(id)) {
-      throw new NotFoundException('Định dạng ID không hợp lệ');
+      throw new NotFoundException('Invalid ID format');
     }
     await this.userService.removeRole(id);
     return { message: 'Xóa vai trò thành công' };

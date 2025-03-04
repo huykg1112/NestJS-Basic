@@ -1,9 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PermissionsService } from '../permissions/permissions.service';
 import { RolePermissionService } from '../role_permissions/role_permissions.service';
 import { CreateRoleDto } from './dto/create-role.dto';
+import { UpdateRoleDto } from './dto/update-role.dto';
 import { Role } from './entities/role.entity';
 
 @Injectable()
@@ -12,7 +17,7 @@ export class RolesService {
     @InjectRepository(Role)
     private readonly roleRepository: Repository<Role>,
     private readonly permissionsService: PermissionsService,
-    private readonly RolePermissionService: RolePermissionService,
+    private readonly rolePermissionService: RolePermissionService, // Lý do: Chuẩn hóa tên biến
   ) {}
 
   async findById(id: string): Promise<Role> {
@@ -35,41 +40,43 @@ export class RolesService {
     const { name, description } = createRoleDto;
     const existingRole = await this.roleRepository.findOne({ where: { name } });
     if (existingRole) {
-      throw new NotFoundException(`Role ${name} đã tồn tại`);
+      throw new BadRequestException(`Role ${name} đã tồn tại`); // Lý do: Dùng BadRequest thay NotFound cho ngữ nghĩa đúng
     }
-    const role = new Role();
-    role.name = name;
-    role.description = description;
+    const role = this.roleRepository.create({ name, description }); // Lý do: Dùng create để gọn hơn
     const savedRole = await this.roleRepository.save(role);
 
     if (name.toLowerCase() === 'admin') {
       const allPermissions = await this.permissionsService.findAll();
-      console.log('All permissions:', allPermissions);
-      for (const permission of allPermissions) {
-        console.log(
-          `Adding permission ${permission.id} to role ${savedRole.id}`,
-        );
-        await this.RolePermissionService.addPermissionToRole(
-          savedRole.id,
-          permission.id,
-        );
-      }
+      await Promise.all(
+        allPermissions.map((permission) =>
+          this.rolePermissionService.addPermissionToRole(
+            savedRole.id,
+            permission.id,
+          ),
+        ),
+      );
     }
     return savedRole;
   }
 
-  async findAll() {
-    return this.roleRepository.find();
+  async findAll(): Promise<Role[]> {
+    return this.roleRepository.find({
+      select: ['id', 'name', 'description', 'isActive'], // Lý do: Chỉ lấy các trường cần thiết để giảm tải
+    });
   }
 
-  async updateRole(id: string, updateRoleDto: CreateRoleDto): Promise<Role> {
+  async updateRole(id: string, updateRoleDto: UpdateRoleDto): Promise<Role> {
     const role = await this.findById(id);
-    if (!role) {
-      throw new NotFoundException(`Không tìm thấy role với id ${id}`);
+    // Lý do: Kiểm tra name trùng lặp khi cập nhật
+    if (updateRoleDto.name && updateRoleDto.name !== role.name) {
+      const existingRole = await this.roleRepository.findOne({
+        where: { name: updateRoleDto.name },
+      });
+      if (existingRole && existingRole.id !== id) {
+        throw new BadRequestException(`Role ${updateRoleDto.name} đã tồn tại`);
+      }
     }
-    if (updateRoleDto.name !== undefined) role.name = updateRoleDto.name;
-    if (updateRoleDto.description !== undefined)
-      role.description = updateRoleDto.description;
+    Object.assign(role, updateRoleDto); // Lý do: Dùng Object.assign để gọn gàng hơn
     return this.roleRepository.save(role);
   }
 
@@ -81,9 +88,22 @@ export class RolesService {
   }
 
   // Xóa Role
-  async deleteRole(id: string): Promise<Role> {
+  async deleteRole(id: string): Promise<void> {
     const role = await this.findById(id);
-    return this.roleRepository.remove(role);
+    // Xóa các rolePermissions trước khi xóa role để tránh lỗi quan hệ
+    await this.rolePermissionService
+      .findByRoleId(id)
+      .then((rolePermissions) =>
+        Promise.all(
+          rolePermissions.map((rp) =>
+            this.rolePermissionService.removePermissionFromRole(
+              id,
+              rp.permission.id,
+            ),
+          ),
+        ),
+      );
+    await this.roleRepository.remove(role);
   }
 
   // Lấy tất cả RolePermission của Role
@@ -102,17 +122,14 @@ export class RolesService {
     roleId: string,
     permissionId: string,
   ): Promise<Role> {
-    const role = await this.roleRepository.findOne({ where: { id: roleId } });
-    if (!role) {
-      throw new NotFoundException(`Không tìm thấy role với id ${roleId}`);
-    }
+    const role = await this.findById(roleId);
     const permission = await this.permissionsService.findById(permissionId);
     if (!permission) {
       throw new NotFoundException(
         `Không tìm thấy permission với id ${permissionId}`,
       );
     }
-    await this.RolePermissionService.addPermissionToRole(roleId, permissionId);
+    await this.rolePermissionService.addPermissionToRole(roleId, permissionId);
     return role;
   }
 }
