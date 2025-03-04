@@ -5,10 +5,12 @@ import {
   Entity,
   ManyToOne,
   PrimaryGeneratedColumn,
+  Unique,
   UpdateDateColumn,
 } from 'typeorm';
 
 @Entity()
+@Unique(['role', 'permission'])
 export class RolePermission {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
@@ -19,9 +21,11 @@ export class RolePermission {
   @UpdateDateColumn({ type: 'timestamp', nullable: true })
   updatedAt!: Date;
 
-  @ManyToOne(() => Role, (role) => role.rolePermissions)
+  @ManyToOne(() => Role, (role) => role.rolePermissions, {
+    onDelete: 'CASCADE',
+  }) // Lý do: Thêm onDelete để đồng bộ xóa
   role!: Role;
 
-  @ManyToOne(() => Permission)
+  @ManyToOne(() => Permission, { onDelete: 'CASCADE' })
   permission!: Permission;
 }

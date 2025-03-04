@@ -2,6 +2,7 @@ import { TokensService } from '@modules/tokens/tokens.service'; // Thêm TokenSe
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { Token } from '../modules/tokens/entities/token.entity';
 import { User } from '../modules/users/entities/user.entity';
 import { UserService } from '../modules/users/user.service';
 import { LoginDto } from './dto/login.dto';
@@ -47,17 +48,8 @@ export class AuthService {
     const user = await this.validateUser(username, password);
     const payload = { username: user.username, sub: user.id };
 
-    // Lấy danh sách token hiện tại của user
-    const existingTokens = await this.tokenService.findAllByUserId(user.id);
-    const currentDate = new Date();
-    for (const token of existingTokens) {
-      if (
-        token.refreshTokenExpiresAt &&
-        token.refreshTokenExpiresAt < currentDate
-      ) {
-        await this.tokenService.deleteByAccessToken(token.id);
-      }
-    }
+    // Xóa token hết hạn
+    await this.tokenService.cleanExpiredTokens();
 
     // Tạo access token và refresh token mới
     const accessToken = this.jwtService.sign(payload, { expiresIn: '1h' });
@@ -78,42 +70,51 @@ export class AuthService {
     refreshTokenDto: RefreshTokenDto,
   ): Promise<{ access_token: string }> {
     const { refreshToken } = refreshTokenDto;
-    const payload = this.jwtService.verify(refreshToken) as {
-      sub: string;
-      username: string;
-    };
-    const tokens = await this.tokenService.findAllByUserId(payload.sub);
-    const token = tokens.find((t) => t.refreshToken === refreshToken);
-
-    if (
-      !token ||
-      !token.refreshTokenExpiresAt ||
-      token.refreshTokenExpiresAt < new Date()
-    ) {
-      throw new UnauthorizedException('Refresh token đã hết hạn');
+    let payload: { sub: string; username: string };
+    try {
+      payload = this.jwtService.verify(refreshToken) as {
+        sub: string;
+        username: string;
+      };
+    } catch (error) {
+      throw new UnauthorizedException('Refresh token không hợp lệ');
     }
-
-    const isValid = await this.compareRefreshToken(
-      refreshToken,
-      token.refreshToken || '',
-    );
-    if (!isValid) throw new UnauthorizedException('Refresh token không hợp lệ');
+    const tokens = await this.tokenService.findAllByUserId(payload.sub);
+    if (!tokens || tokens.length === 0) {
+      throw new UnauthorizedException('Không tìm thấy token nào cho user này');
+    }
+    let matchedToken: Token | undefined;
+    for (const token of tokens) {
+      const isMatch = await this.compareRefreshToken(
+        refreshToken,
+        token.refreshToken || '',
+      );
+      if (isMatch) {
+        matchedToken = token;
+        break;
+      }
+    }
+    if (!matchedToken) {
+      throw new UnauthorizedException('Refresh token không hợp lệ');
+    }
 
     const newPayload = { username: payload.username, sub: payload.sub };
     const newAccessToken = this.jwtService.sign(newPayload, {
       expiresIn: '1h',
     });
-
-    // Cập nhật access token mới
-    token.accessToken = newAccessToken;
-    token.accessTokenExpiresAt = new Date(Date.now() + 1 * 60 * 60 * 1000);
-    await this.tokenService.save(token);
+    matchedToken.accessToken = newAccessToken;
+    matchedToken.accessTokenExpiresAt = new Date(
+      Date.now() + 1 * 60 * 60 * 1000,
+    ); // 1 giờ
+    await this.tokenService.save(matchedToken);
 
     return { access_token: newAccessToken };
   }
 
   async logout(accessToken: string): Promise<void> {
-    // Xóa token cụ thể dựa trên accessToken
-    await this.tokenService.deleteByAccessToken(accessToken);
+    const token = await this.tokenService.findByAccessToken(accessToken);
+    if (token) {
+      await this.tokenService.deleteByAccessToken(accessToken); // Xóa token
+    }
   }
 }

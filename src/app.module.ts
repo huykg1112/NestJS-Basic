@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { CartItemsModule } from './modules/cart_items/cart_items.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { FavoriteProductsModule } from './modules/favorite_products/favorite_products.module';
@@ -26,17 +27,24 @@ import { UserModule } from './modules/users/user.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      envFilePath: ['.env.local', '.env'], // Lý do: Hỗ trợ nhiều file .env (dev, prod)
+      cache: true, // Lý do: Bật cache để tăng tốc độ truy cập biến môi trường
     }),
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: process.env.DB_HOST,
-      port: Number(process.env.DB_PORT),
-      username: process.env.DB_USERNAME,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME,
-      entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      synchronize: true,
+    TypeOrmModule.forRootAsync({
+      // Lý do: Dùng forRootAsync để đảm bảo ConfigModule tải trước khi cấu hình TypeORM
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        type: 'postgres',
+        host: configService.get<string>('DB_HOST'),
+        port: configService.get<number>('DB_PORT'),
+        username: configService.get<string>('DB_USERNAME'),
+        password: configService.get<string>('DB_PASSWORD'),
+        database: configService.get<string>('DB_NAME'),
+        entities: [__dirname + '/**/*.entity{.ts,.js}'],
+        synchronize: configService.get<boolean>('DB_SYNC'), // Lý do: Tắt synchronize ở production
+        logging: configService.get<boolean>('DB_LOGGING'), // Lý do: Tùy chọn bật/tắt log
+      }),
     }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -65,6 +73,12 @@ import { UserModule } from './modules/users/user.module';
     TokensModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: 'APP_GUARD', // Lý do: Đăng ký JwtAuthGuard làm global guard
+      useClass: JwtAuthGuard,
+    },
+  ],
 })
 export class AppModule {}

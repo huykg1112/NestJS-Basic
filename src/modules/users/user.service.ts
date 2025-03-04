@@ -17,16 +17,27 @@ import { User } from './entities/user.entity';
 
 @Injectable()
 export class UserService {
+  private readonly saltRounds: number; // Lý do: Cache saltRounds để tăng tốc độ
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly configService: ConfigService,
     private readonly tokenService: TokensService,
     private readonly rolesService: RolesService,
-  ) {}
+  ) {
+    this.saltRounds = Number(
+      this.configService.get<number>('BCRYPT_SALT_ROUNDS') ?? 10,
+    );
+    if (isNaN(this.saltRounds)) {
+      throw new Error('BCRYPT_SALT_ROUNDS must be a number'); // Lý do: Ném lỗi ngay constructor để phát hiện sớm
+    }
+  }
 
   async findByUsername(username: string): Promise<User> {
-    const user = await this.userRepository.findOne({ where: { username } });
+    const user = await this.userRepository.findOne({
+      where: { username },
+      relations: ['role'],
+    });
     if (!user) {
       throw new NotFoundException(
         `Không tìm thấy user với username ${username}`,
@@ -55,13 +66,18 @@ export class UserService {
       registerUserDto;
 
     // Kiểm tra username hoặc email đã tồn tại
-    const existingUser = await this.userRepository.findOne({
-      where: [{ username }, { email }],
+    const existingUsername = await this.userRepository.findOne({
+      where: { username },
     });
-    if (existingUser) {
-      throw new BadRequestException('Username hoặc Email đã được sử dụng');
+    if (existingUsername) {
+      throw new BadRequestException('Username đã được sử dụng');
     }
-
+    const existingEmail = await this.userRepository.findOne({
+      where: { email },
+    });
+    if (existingEmail) {
+      throw new BadRequestException('Email đã được sử dụng');
+    }
     // Mã hóa mật khẩu
     const saltRounds = Number(
       this.configService.get<number>('BCRYPT_SALT_ROUNDS'),
@@ -104,14 +120,21 @@ export class UserService {
   ): Promise<{ message: string }> {
     const user = await this.findById(userId);
 
+    // Lý do: Kiểm tra email trùng lặp khi cập nhật
+    if (updateProfileDto.email && updateProfileDto.email !== user.email) {
+      const existingEmail = await this.userRepository.findOne({
+        where: { email: updateProfileDto.email },
+      });
+      if (existingEmail && existingEmail.id !== userId) {
+        throw new BadRequestException(
+          'Email đã được sử dụng bởi người dùng khác',
+        );
+      }
+    }
+
     const { fullName, email, phone, address, isActive, avatar } =
       updateProfileDto;
-    if (fullName !== undefined) user.fullName = fullName;
-    if (email !== undefined) user.email = email;
-    if (phone !== undefined) user.phone = phone;
-    if (address !== undefined) user.address = address;
-    if (isActive !== undefined) user.isActive = isActive;
-    if (avatar !== undefined) user.avatar = avatar;
+    Object.assign(user, { fullName, email, phone, address, isActive, avatar }); //
 
     await this.userRepository.save(user);
     return { message: 'Cập nhật thông tin thành công' };
@@ -171,27 +194,16 @@ export class UserService {
   async getUserRole(
     userId: string,
   ): Promise<{ role: { id: string; name: string } }> {
-    const user = await this.userRepository.findOne({
-      where: { id: userId },
-      relations: ['role'], // Tải mối quan hệ role
-    });
-    if (!user) {
-      throw new NotFoundException(
-        `Người dùng với ID ${userId} không được tìm thấy`,
-      );
-    }
+    const user = await this.findById(userId);
     return { role: { id: user.role.id, name: user.role.name } };
   }
 
   async removeRole(userId: string): Promise<User> {
     const user = await this.findById(userId);
     const roleClient = await this.rolesService.findByName('Client');
-    if (!user) {
-      throw new NotFoundException(
-        `Người dùng với ID ${userId} không được tìm thấy`,
-      );
+    if (!roleClient) {
+      throw new NotFoundException('Vai trò Client không tồn tại'); // Lý do: Kiểm tra role mặc định
     }
-
     user.role = roleClient;
     return this.userRepository.save(user);
   }

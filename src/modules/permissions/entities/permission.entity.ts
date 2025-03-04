@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -11,7 +12,8 @@ export class Permission {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ type: 'varchar', length: 100 })
+  @Index() // Lý do: Tăng tốc độ tìm kiếm theo name
+  @Column({ type: 'varchar', length: 100, unique: true })
   name!: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })

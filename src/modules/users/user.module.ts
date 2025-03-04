@@ -11,14 +11,6 @@ import { UserService } from './user.service';
 @Module({
   imports: [
     TypeOrmModule.forFeature([User]),
-    JwtModule.registerAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET'),
-        signOptions: { expiresIn: '1h' },
-      }),
-    }),
     ConfigModule,
     forwardRef(() => TokensModule), // Ensure TokensModule is imported
     forwardRef(() => RolesModule), // Ensure RolesModule is imported
